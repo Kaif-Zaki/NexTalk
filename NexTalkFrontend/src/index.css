@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Space+Grotesk:wght@500;600&family=IBM+Plex+Mono:wght@500&display=swap');
+
+:root {
+  font-family: 'Archivo', sans-serif;
+  line-height: 1.4;
+  font-weight: 400;
+  color: #1f1b16;
+  background-color: #f5efe8;
+
+  --ink: #1f1b16;
+  --muted: #7a6a5c;
+  --accent: #c96b37;
+  --panel: #fffaf4;
+  --surface: #fdf3e8;
+  --panel-border: rgba(76, 49, 30, 0.12);
+  --shadow-soft: 0 18px 40px -30px rgba(39, 23, 11, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(246, 214, 190, 0.7), transparent 45%),
+    radial-gradient(circle at 85% 10%, rgba(198, 211, 245, 0.6), transparent 40%),
+    linear-gradient(180deg, #fdf3e8, #f5efe8 60%, #f8f1ea);
+}
+
+#root {
+  height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Space Grotesk', sans-serif;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+input,
+button {
+  font-family: inherit;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid rgba(201, 107, 55, 0.45);
+  outline-offset: 2px;
+}
+
+code {
+  font-family: 'IBM Plex Mono', monospace;
+}
