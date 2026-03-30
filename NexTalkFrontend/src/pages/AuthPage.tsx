@@ -28,20 +28,44 @@ export function AuthPage({ onDone }: AuthPageProps) {
   }
 
   return (
-    <div className="panel">
-      <div className="panel-header">
-        <div>
-          <p className="panel-title">
-            {mode === 'login' ? 'Welcome back' : 'Create your account'}
-          </p>
-          <p className="panel-sub">
-            {mode === 'login'
-              ? 'Login to continue chatting.'
-              : 'Register to join your team.'}
-          </p>
+    <div className="auth-card">
+      <div className="auth-hero">
+        <div className="auth-brand">
+          <span className="brand-mark">N</span>
+          <div>
+            <p className="auth-brand-name">NexTalk</p>
+            <p className="auth-brand-tag">Realtime collaboration</p>
+          </div>
+        </div>
+        <h2 className="auth-title">
+          {mode === 'login'
+            ? 'Welcome back to your space.'
+            : 'Create your team workspace.'}
+        </h2>
+        <p className="auth-copy">
+          {mode === 'login'
+            ? 'Pick up conversations exactly where you left them. Secure, fast, and built for focused teams.'
+            : 'Invite teammates, share files, and stay aligned with one workspace for every project.'}
+        </p>
+        <div className="auth-highlights">
+          <div className="auth-chip">Live chat rooms</div>
+          <div className="auth-chip">Instant invites</div>
+          <div className="auth-chip">Secure access</div>
         </div>
       </div>
-      <form className="panel-body" onSubmit={handleSubmit}>
+
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <div className="auth-form-header">
+          <p className="auth-form-title">
+            {mode === 'login' ? 'Sign in' : 'Create account'}
+          </p>
+          <p className="auth-form-sub">
+            {mode === 'login'
+              ? 'Use your email and password to continue.'
+              : 'Start with a few details to get started.'}
+          </p>
+        </div>
+
         {mode === 'register' ? (
           <label className="field">
             Username
@@ -50,6 +74,7 @@ export function AuthPage({ onDone }: AuthPageProps) {
               onChange={(event) =>
                 setForm({ ...form, username: event.target.value })
               }
+              placeholder="Enter your name"
               required
             />
           </label>
@@ -60,6 +85,7 @@ export function AuthPage({ onDone }: AuthPageProps) {
             type="email"
             value={form.email}
             onChange={(event) => setForm({ ...form, email: event.target.value })}
+            placeholder="you@company.com"
             required
           />
         </label>
@@ -71,21 +97,24 @@ export function AuthPage({ onDone }: AuthPageProps) {
             onChange={(event) =>
               setForm({ ...form, password: event.target.value })
             }
+            placeholder="Minimum 6 characters"
             required
           />
         </label>
-        <div className="panel-actions panel-actions--split">
-          <button
-            type="button"
-            className="ghost"
-            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-          >
-            {mode === 'login' ? 'Create account' : 'Use existing account'}
-          </button>
-          <button type="submit" className="primary">
-            {mode === 'login' ? 'Login' : 'Register'}
-          </button>
-        </div>
+
+        <button type="submit" className="primary auth-submit">
+          {mode === 'login' ? 'Login' : 'Register'}
+        </button>
+
+        <button
+          type="button"
+          className="ghost auth-toggle"
+          onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+        >
+          {mode === 'login'
+            ? 'New here? Create an account'
+            : 'Already have an account? Sign in'}
+        </button>
       </form>
     </div>
   )

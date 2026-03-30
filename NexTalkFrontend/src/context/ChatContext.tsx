@@ -86,10 +86,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       auth: { token },
     })
 
-    socket.on('message:new', (message: MessageRow) => {
+    const appendMessage = (message: MessageRow) => {
       if (!message.chat_id) return
       setMessagesByChat((prev) => {
         const existing = prev[message.chat_id!] ?? []
+        if (existing.some((item) => item.id === message.id)) {
+          return prev
+        }
         return {
           ...prev,
           [message.chat_id!]: [...existing, message],
@@ -106,7 +109,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             : chat,
         ),
       )
-    })
+    }
+
+    socket.on('message:new', appendMessage)
 
     socketRef.current = socket
 
@@ -141,6 +146,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     setMessagesByChat((prev) => {
       const existing = prev[activeChatId] ?? []
+      if (existing.some((item) => item.id === data.message.id)) {
+        return prev
+      }
       return {
         ...prev,
         [activeChatId]: [...existing, data.message],

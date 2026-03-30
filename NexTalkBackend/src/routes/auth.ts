@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise'
 import { pool } from '../db'
 import { signToken } from '../auth'
+import { requireAuth, type AuthedRequest } from '../middleware/auth'
 import { asyncHandler } from '../utils/asyncHandler'
 
 const router = Router()
@@ -75,6 +76,31 @@ router.post(
   }
   const token = signToken({ sub: user.id, email: user.email, username: user.username })
   return res.json({ user, token })
+  }),
+)
+
+router.get(
+  '/me',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res) => {
+  const userId = req.user!.sub
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, username, email FROM users WHERE id = ? LIMIT 1',
+    [userId],
+  )
+
+  const userRow = rows[0]
+  if (!userRow) {
+    return res.status(401).json({ error: 'User not found' })
+  }
+
+  return res.json({
+    user: {
+      id: userRow.id as number,
+      username: userRow.username as string,
+      email: userRow.email as string,
+    },
+  })
   }),
 )
 

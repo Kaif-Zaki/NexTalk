@@ -44,6 +44,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (payload) {
       setUser({ id: payload.sub, email: payload.email, username: payload.username })
     }
+
+    fetch(`${API_BASE}/api/auth/me`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error('Session invalid')
+        }
+        return response.json() as Promise<{ user: User }>
+      })
+      .then((data) => {
+        setUser(data.user)
+      })
+      .catch(() => {
+        localStorage.removeItem('nextalk_token')
+        setToken(null)
+        setUser(null)
+      })
   }, [token])
 
   async function apiRequest<T>(path: string, options: RequestInit = {}) {
@@ -60,6 +81,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const data = await response.json()
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('nextalk_token')
+        setToken(null)
+        setUser(null)
+      }
       throw new Error(data.error ?? 'Request failed')
     }
 
