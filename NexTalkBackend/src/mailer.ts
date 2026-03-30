@@ -1,21 +1,12 @@
-import nodemailer from 'nodemailer'
 import { env } from './env'
 
-const hasSmtp = Boolean(env.SMTP_HOST)
-
-const transporter = hasSmtp
-  ? nodemailer.createTransport({
-      host: env.SMTP_HOST,
-      port: env.SMTP_PORT,
-      secure: env.SMTP_PORT === 465,
-      auth: env.SMTP_USER
-        ? {
-            user: env.SMTP_USER,
-            pass: env.SMTP_PASS,
-          }
-        : undefined,
-    })
-  : null
+type EmailJsPayload = {
+  service_id: string
+  template_id: string
+  user_id: string
+  accessToken?: string
+  template_params: Record<string, string>
+}
 
 export async function sendInviteEmail(params: {
   to: string
@@ -24,20 +15,39 @@ export async function sendInviteEmail(params: {
   message: string
   inviteUrl: string
 }) {
-  if (!transporter) {
+  if (!env.EMAILJS_SERVICE_ID || !env.EMAILJS_TEMPLATE_ID || !env.EMAILJS_PUBLIC_KEY) {
     console.log('[invite-email]', params)
+    console.warn('EmailJS is not configured. Invite email logged only.')
     return
   }
 
-  await transporter.sendMail({
-    from: env.SMTP_FROM,
-    to: params.to,
-    subject: `You are invited to ${params.chatTitle} on NexTalk`,
-    text: `${params.inviterName} invited you to join "${params.chatTitle}".
+  const payload: EmailJsPayload = {
+    service_id: env.EMAILJS_SERVICE_ID,
+    template_id: env.EMAILJS_TEMPLATE_ID,
+    user_id: env.EMAILJS_PUBLIC_KEY,
+    template_params: {
+      to_email: params.to,
+      inviter_name: params.inviterName,
+      chat_title: params.chatTitle,
+      invite_message: params.message,
+      invite_url: params.inviteUrl,
+    },
+  }
 
-Message: ${params.message}
+  if (env.EMAILJS_PRIVATE_KEY) {
+    payload.accessToken = env.EMAILJS_PRIVATE_KEY
+  }
 
-Accept: ${params.inviteUrl}
-`,
+  const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
   })
+
+  if (!response.ok) {
+    const text = await response.text()
+    console.warn('EmailJS error:', response.status, text)
+  }
 }

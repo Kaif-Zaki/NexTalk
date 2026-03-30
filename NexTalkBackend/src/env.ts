@@ -12,18 +12,17 @@ export const env = {
   JWT_SECRET: process.env.JWT_SECRET ?? 'change-me',
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
   APP_BASE_URL: process.env.APP_BASE_URL ?? 'http://localhost:5173',
-  SMTP_HOST: process.env.SMTP_HOST ?? '',
-  SMTP_PORT: Number(process.env.SMTP_PORT ?? 587),
-  SMTP_USER: process.env.SMTP_USER ?? '',
-  SMTP_PASS: process.env.SMTP_PASS ?? '',
-  SMTP_FROM: process.env.SMTP_FROM ?? 'NexTalk <no-reply@nextalk.local>',
+  EMAILJS_SERVICE_ID: process.env.EMAILJS_SERVICE_ID ?? '',
+  EMAILJS_TEMPLATE_ID: process.env.EMAILJS_TEMPLATE_ID ?? '',
+  EMAILJS_PUBLIC_KEY: process.env.EMAILJS_PUBLIC_KEY ?? '',
+  EMAILJS_PRIVATE_KEY: process.env.EMAILJS_PRIVATE_KEY ?? '',
 }
 
 export function warnIfInsecureEnv() {
   if (env.JWT_SECRET === 'change-me') {
     console.warn('JWT_SECRET is using the default value. Set it in .env.')
   }
-  if (!env.SMTP_HOST) {
-    console.warn('SMTP_HOST is empty. Invite emails will be logged only.')
+  if (!env.EMAILJS_SERVICE_ID || !env.EMAILJS_TEMPLATE_ID || !env.EMAILJS_PUBLIC_KEY) {
+    console.warn('EmailJS is not configured. Invite emails will be logged only.')
   }
 }

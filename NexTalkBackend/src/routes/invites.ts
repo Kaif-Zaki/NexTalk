@@ -63,7 +63,7 @@ router.post('/:token/accept', requireAuth, async (req: AuthedRequest, res) => {
     ['accepted', invite.id],
   )
 
-  return res.json({ success: true })
+  return res.json({ success: true, chatId: invite.chat_id })
 })
 
 export async function createInvite(params: {
