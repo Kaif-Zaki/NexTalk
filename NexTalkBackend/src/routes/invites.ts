@@ -5,10 +5,13 @@ import { pool } from '../db'
 import { requireAuth, type AuthedRequest } from '../middleware/auth'
 import { sendInviteEmail } from '../mailer'
 import { env } from '../env'
+import { asyncHandler } from '../utils/asyncHandler'
 
 const router = Router()
 
-router.get('/:token', async (req, res) => {
+router.get(
+  '/:token',
+  asyncHandler(async (req, res) => {
   const { token } = req.params
 
   const [rows] = await pool.query<RowDataPacket[]>(
@@ -28,9 +31,13 @@ router.get('/:token', async (req, res) => {
   }
 
   return res.json({ invite })
-})
+  }),
+)
 
-router.post('/:token/accept', requireAuth, async (req: AuthedRequest, res) => {
+router.post(
+  '/:token/accept',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res) => {
   const { token } = req.params
   const userId = req.user!.sub
 
@@ -64,12 +71,14 @@ router.post('/:token/accept', requireAuth, async (req: AuthedRequest, res) => {
   )
 
   return res.json({ success: true, chatId: invite.chat_id })
-})
+  }),
+)
 
 export async function createInvite(params: {
   chatId: number
   inviterId: number
   inviterName: string
+  inviterEmail: string
   inviteeEmail: string
   message: string
   chatTitle: string
@@ -90,11 +99,13 @@ export async function createInvite(params: {
     ],
   )
 
-  const inviteUrl = `${env.APP_BASE_URL}/invite/${token}`
+  const inviteUrl = `${env.APP_BASE_URL}/invite/${token}?chat=${params.chatId}`
   await sendInviteEmail({
     to: params.inviteeEmail,
     inviterName: params.inviterName,
+    inviterEmail: params.inviterEmail,
     chatTitle: params.chatTitle,
+    chatId: params.chatId,
     message: params.message,
     inviteUrl,
   })

@@ -3,6 +3,7 @@ import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise'
 import { pool } from '../db'
 import { requireAuth, type AuthedRequest } from '../middleware/auth'
 import { emitToChat } from '../socket'
+import { asyncHandler } from '../utils/asyncHandler'
 
 const router = Router()
 
@@ -14,7 +15,10 @@ async function assertMembership(chatId: number, userId: number) {
   return rows.length > 0
 }
 
-router.get('/:chatId/messages', requireAuth, async (req: AuthedRequest, res) => {
+router.get(
+  '/:chatId/messages',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res) => {
   const userId = req.user!.sub
   const chatId = Number(req.params.chatId)
   const limit = Math.min(Number(req.query.limit ?? 50), 100)
@@ -47,9 +51,13 @@ router.get('/:chatId/messages', requireAuth, async (req: AuthedRequest, res) => 
 
   const messages = rows.reverse()
   return res.json({ messages })
-})
+  }),
+)
 
-router.post('/:chatId/messages', requireAuth, async (req: AuthedRequest, res) => {
+router.post(
+  '/:chatId/messages',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res) => {
   const userId = req.user!.sub
   const chatId = Number(req.params.chatId)
   const { body } = req.body as { body?: string }
@@ -76,12 +84,14 @@ router.post('/:chatId/messages', requireAuth, async (req: AuthedRequest, res) =>
     id: result.insertId,
     chat_id: chatId,
     sender_id: userId,
+    sender_username: req.user!.username,
     body: body.trim(),
     created_at: new Date().toISOString(),
   }
 
   emitToChat(chatId, 'message:new', message)
   return res.status(201).json({ message })
-})
+  }),
+)
 
 export default router

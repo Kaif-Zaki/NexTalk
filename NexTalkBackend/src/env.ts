@@ -16,6 +16,8 @@ export const env = {
   EMAILJS_TEMPLATE_ID: process.env.EMAILJS_TEMPLATE_ID ?? '',
   EMAILJS_PUBLIC_KEY: process.env.EMAILJS_PUBLIC_KEY ?? '',
   EMAILJS_PRIVATE_KEY: process.env.EMAILJS_PRIVATE_KEY ?? '',
+  EMAILJS_FROM_NAME: process.env.EMAILJS_FROM_NAME ?? '',
+  EMAILJS_FROM_EMAIL: process.env.EMAILJS_FROM_EMAIL ?? '',
 }
 
 export function warnIfInsecureEnv() {

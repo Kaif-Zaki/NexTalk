@@ -3,10 +3,13 @@ import bcrypt from 'bcryptjs'
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise'
 import { pool } from '../db'
 import { signToken } from '../auth'
+import { asyncHandler } from '../utils/asyncHandler'
 
 const router = Router()
 
-router.post('/register', async (req, res) => {
+router.post(
+  '/register',
+  asyncHandler(async (req, res) => {
   const { username, email, password } = req.body as {
     username?: string
     email?: string
@@ -35,9 +38,12 @@ router.post('/register', async (req, res) => {
   const user = { id: result.insertId, username, email }
   const token = signToken({ sub: user.id, email: user.email, username })
   return res.status(201).json({ user, token })
-})
+  }),
+)
 
-router.post('/login', async (req, res) => {
+router.post(
+  '/login',
+  asyncHandler(async (req, res) => {
   const { email, password } = req.body as {
     email?: string
     password?: string
@@ -69,6 +75,7 @@ router.post('/login', async (req, res) => {
   }
   const token = signToken({ sub: user.id, email: user.email, username: user.username })
   return res.json({ user, token })
-})
+  }),
+)
 
 export default router

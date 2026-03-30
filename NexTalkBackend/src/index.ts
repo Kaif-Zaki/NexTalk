@@ -29,6 +29,19 @@ app.use('/api/chats', chatRoutes)
 app.use('/api/chats', messageRoutes)
 app.use('/api/invites', inviteRoutes)
 
+app.use(
+  (
+    err: Error,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    console.error('API error:', err.message)
+    const message = process.env.NODE_ENV === 'production' ? 'Server error' : err.message
+    return res.status(500).json({ error: message })
+  },
+)
+
 const server = http.createServer(app)
 initSocket(server)
 

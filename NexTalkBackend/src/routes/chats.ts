@@ -3,10 +3,14 @@ import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise'
 import { pool } from '../db'
 import { requireAuth, type AuthedRequest } from '../middleware/auth'
 import { createInvite } from './invites'
+import { asyncHandler } from '../utils/asyncHandler'
 
 const router = Router()
 
-router.get('/', requireAuth, async (req: AuthedRequest, res) => {
+router.get(
+  '/',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res) => {
   const userId = req.user!.sub
 
   const [rows] = await pool.query<RowDataPacket[]>(
@@ -33,9 +37,13 @@ router.get('/', requireAuth, async (req: AuthedRequest, res) => {
   )
 
   return res.json({ chats: rows })
-})
+  }),
+)
 
-router.post('/', requireAuth, async (req: AuthedRequest, res) => {
+router.post(
+  '/',
+  requireAuth,
+  asyncHandler(async (req: AuthedRequest, res) => {
   const { title, memberIds, memberEmails, welcomeMessage } = req.body as {
     title?: string
     memberIds?: number[]
@@ -69,47 +77,53 @@ router.post('/', requireAuth, async (req: AuthedRequest, res) => {
   ])
 
   if (requestedEmails.length > 0) {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT id, email FROM users WHERE email IN (?)',
-      [requestedEmails],
-    )
-    const existingUsers = rows.map((row) => ({
-      id: row.id as number,
-      email: String(row.email).toLowerCase(),
-    }))
-
-    const existingIds = existingUsers.map((user) => user.id)
-    if (existingIds.length > 0) {
-      const existingValues = existingIds.map((memberId) => [chatId, memberId])
-      await pool.query(
-        'INSERT IGNORE INTO chat_members (chat_id, user_id) VALUES ?',
-        [existingValues],
+    try {
+      const [rows] = await pool.query<RowDataPacket[]>(
+        'SELECT id, email FROM users WHERE email IN (?)',
+        [requestedEmails],
       )
+      const existingUsers = rows.map((row) => ({
+        id: row.id as number,
+        email: String(row.email).toLowerCase(),
+      }))
+
+      const existingIds = existingUsers.map((user) => user.id)
+      if (existingIds.length > 0) {
+        const existingValues = existingIds.map((memberId) => [chatId, memberId])
+        await pool.query(
+          'INSERT IGNORE INTO chat_members (chat_id, user_id) VALUES ?',
+          [existingValues],
+        )
+      }
+
+      const existingEmailSet = new Set(existingUsers.map((user) => user.email))
+      const pendingEmails = requestedEmails.filter(
+        (email) => !existingEmailSet.has(email),
+      )
+
+      const message =
+        welcomeMessage?.trim() || `${req.user!.username} invited you to chat.`
+
+      await Promise.all(
+        pendingEmails.map((email) =>
+          createInvite({
+            chatId,
+            inviterId: userId,
+            inviterName: req.user!.username,
+            inviterEmail: req.user!.email,
+            inviteeEmail: email,
+            message,
+            chatTitle: title ?? 'New chat',
+          }),
+        ),
+      )
+    } catch (error) {
+      console.warn('Invite flow failed:', (error as Error).message)
     }
-
-    const existingEmailSet = new Set(existingUsers.map((user) => user.email))
-    const pendingEmails = requestedEmails.filter(
-      (email) => !existingEmailSet.has(email),
-    )
-
-    const message =
-      welcomeMessage?.trim() || `${req.user!.username} invited you to chat.`
-
-    await Promise.all(
-      pendingEmails.map((email) =>
-        createInvite({
-          chatId,
-          inviterId: userId,
-          inviterName: req.user!.username,
-          inviteeEmail: email,
-          message,
-          chatTitle: title ?? 'New chat',
-        }),
-      ),
-    )
   }
 
   return res.status(201).json({ chatId })
-})
+  }),
+)
 
 export default router
