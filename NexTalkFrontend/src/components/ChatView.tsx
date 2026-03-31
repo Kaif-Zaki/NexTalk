@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { useChat } from '../context/ChatContext'
 import { useToast } from '../context/ToastContext'
 import { formatTime } from '../lib/time'
+import { API_BASE } from '../lib/constants'
 
 type ChatViewProps = {
   onFiles: () => void
@@ -12,7 +13,7 @@ type ChatViewProps = {
 
 export function ChatView({ onFiles, onCalls, onDetails }: ChatViewProps) {
   const { user } = useAuth()
-  const { activeChat, messages, sendMessage } = useChat()
+  const { activeChat, messages, sendMessage, deleteChat, blockChat } = useChat()
   const { notify } = useToast()
   const [draft, setDraft] = useState('')
 
@@ -20,6 +21,32 @@ export function ChatView({ onFiles, onCalls, onDetails }: ChatViewProps) {
     if (!draft.trim()) return
     await sendMessage(draft.trim())
     setDraft('')
+  }
+
+  async function handleDeleteChat() {
+    if (!activeChat) return
+    const ok = window.confirm(
+      activeChat.is_group ? 'Leave this chat?' : 'Delete this chat?',
+    )
+    if (!ok) return
+    try {
+      await deleteChat(activeChat.id)
+      notify(activeChat.is_group ? 'Left chat' : 'Chat deleted')
+    } catch (error) {
+      notify((error as Error).message)
+    }
+  }
+
+  async function handleBlockUser() {
+    if (!activeChat || activeChat.is_group) return
+    const ok = window.confirm('Block this user?')
+    if (!ok) return
+    try {
+      await blockChat(activeChat.id)
+      notify('User blocked')
+    } catch (error) {
+      notify((error as Error).message)
+    }
   }
 
   return (
@@ -39,6 +66,18 @@ export function ChatView({ onFiles, onCalls, onDetails }: ChatViewProps) {
           <button className="ghost" onClick={onDetails}>
             Details
           </button>
+          {activeChat && (
+            <>
+              <button className="ghost" onClick={handleDeleteChat}>
+                {activeChat.is_group ? 'Leave' : 'Delete'}
+              </button>
+              {!activeChat.is_group && (
+                <button className="ghost" onClick={handleBlockUser}>
+                  Block
+                </button>
+              )}
+            </>
+          )}
         </div>
       </header>
 
@@ -53,6 +92,16 @@ export function ChatView({ onFiles, onCalls, onDetails }: ChatViewProps) {
                 message.sender_id === user?.id ? 'message--mine' : ''
               }`}
             >
+              <div className="message-avatar">
+                {message.sender_avatar_url ? (
+                  <img
+                    src={`${API_BASE}${message.sender_avatar_url}`}
+                    alt={message.sender_username}
+                  />
+                ) : (
+                  message.sender_username?.[0]?.toUpperCase() ?? 'U'
+                )}
+              </div>
               <div className="message-bubble">
                 <p className="message-author">{message.sender_username}</p>
                 <p className="message-text">{message.body}</p>

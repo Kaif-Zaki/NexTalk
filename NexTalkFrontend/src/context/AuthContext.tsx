@@ -5,6 +5,7 @@ type User = {
   id: number
   username: string
   email: string
+  avatarUrl: string | null
 }
 
 type AuthContextValue = {
@@ -13,6 +14,7 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<User>
   register: (username: string, email: string, password: string) => Promise<User>
   logout: () => void
+  refreshUser: () => Promise<void>
   apiRequest: <T>(path: string, options?: RequestInit) => Promise<T>
 }
 
@@ -42,7 +44,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     const payload = parseJwt(token)
     if (payload) {
-      setUser({ id: payload.sub, email: payload.email, username: payload.username })
+      setUser({
+        id: payload.sub,
+        email: payload.email,
+        username: payload.username,
+        avatarUrl: null,
+      })
     }
 
     fetch(`${API_BASE}/api/auth/me`, {
@@ -122,8 +129,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
   }
 
+  async function refreshUser() {
+    if (!token) return
+    const data = await apiRequest<{ user: User }>('/api/auth/me')
+    setUser(data.user)
+  }
+
   const value = useMemo<AuthContextValue>(
-    () => ({ token, user, login, register, logout, apiRequest }),
+    () => ({ token, user, login, register, logout, refreshUser, apiRequest }),
     [token, user],
   )
 

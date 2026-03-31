@@ -56,7 +56,7 @@ router.post(
     return res.status(404).json({ error: 'Invite not found' })
   }
 
-  if (invite.status !== 'pending') {
+  if (invite.status !== 'pending' && invite.status !== 'accepted') {
     return res.status(400).json({ error: 'Invite is no longer valid' })
   }
 
@@ -65,10 +65,12 @@ router.post(
     [invite.chat_id, userId],
   )
 
-  await pool.query<ResultSetHeader>(
-    'UPDATE invites SET status = ? WHERE id = ? LIMIT 1',
-    ['accepted', invite.id],
-  )
+  if (invite.status === 'pending') {
+    await pool.query<ResultSetHeader>(
+      'UPDATE invites SET status = ? WHERE id = ? LIMIT 1',
+      ['accepted', invite.id],
+    )
+  }
 
   return res.json({ success: true, chatId: invite.chat_id })
   }),
@@ -83,21 +85,35 @@ export async function createInvite(params: {
   message: string
   chatTitle: string
 }) {
-  const token = randomBytes(24).toString('hex')
-
-  await pool.query<ResultSetHeader>(
+  const [existing] = await pool.query<RowDataPacket[]>(
     `
-    INSERT INTO invites (chat_id, inviter_id, invitee_email, message, token)
-    VALUES (?, ?, ?, ?, ?)
+    SELECT token
+    FROM invites
+    WHERE chat_id = ? AND invitee_email = ? AND status = 'pending'
+    ORDER BY created_at DESC
+    LIMIT 1
     `,
-    [
-      params.chatId,
-      params.inviterId,
-      params.inviteeEmail,
-      params.message,
-      token,
-    ],
+    [params.chatId, params.inviteeEmail],
   )
+
+  const existingToken = existing[0]?.token as string | undefined
+  const token = existingToken ?? randomBytes(24).toString('hex')
+
+  if (!existingToken) {
+    await pool.query<ResultSetHeader>(
+      `
+      INSERT INTO invites (chat_id, inviter_id, invitee_email, message, token)
+      VALUES (?, ?, ?, ?, ?)
+      `,
+      [
+        params.chatId,
+        params.inviterId,
+        params.inviteeEmail,
+        params.message,
+        token,
+      ],
+    )
+  }
 
   const inviteUrl = `${env.APP_BASE_URL}/invite/${token}?chat=${params.chatId}`
   await sendInviteEmail({

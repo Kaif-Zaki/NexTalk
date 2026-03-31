@@ -10,6 +10,7 @@ type ChatRow = {
   created_at: string
   last_message: string | null
   last_message_at: string | null
+  display_title?: string | null
 }
 
 type MessageRow = {
@@ -18,6 +19,7 @@ type MessageRow = {
   created_at: string
   sender_id: number
   sender_username: string
+  sender_avatar_url?: string | null
   chat_id?: number
 }
 
@@ -34,6 +36,8 @@ type ChatContextValue = {
     memberEmails: string[]
     welcomeMessage: string
   }) => Promise<number>
+  deleteChat: (chatId: number) => Promise<void>
+  blockChat: (chatId: number) => Promise<void>
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null)
@@ -182,6 +186,32 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return data.chatId
   }
 
+  async function deleteChat(chatId: number) {
+    await apiRequest(`/api/chats/${chatId}`, { method: 'DELETE' })
+    setMessagesByChat((prev) => {
+      const next = { ...prev }
+      delete next[chatId]
+      return next
+    })
+    if (activeChatId === chatId) {
+      setActiveChatId(null)
+    }
+    await refreshChats()
+  }
+
+  async function blockChat(chatId: number) {
+    await apiRequest(`/api/chats/${chatId}/block`, { method: 'POST' })
+    setMessagesByChat((prev) => {
+      const next = { ...prev }
+      delete next[chatId]
+      return next
+    })
+    if (activeChatId === chatId) {
+      setActiveChatId(null)
+    }
+    await refreshChats()
+  }
+
   const value = useMemo<ChatContextValue>(
     () => ({
       chats,
@@ -192,6 +222,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       refreshChats,
       sendMessage,
       createChat,
+      deleteChat,
+      blockChat,
     }),
     [chats, activeChatId, activeChat, messages],
   )

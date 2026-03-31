@@ -36,7 +36,7 @@ router.post(
     [username, email, passwordHash],
   )
 
-  const user = { id: result.insertId, username, email }
+  const user = { id: result.insertId, username, email, avatarUrl: null }
   const token = signToken({ sub: user.id, email: user.email, username })
   return res.status(201).json({ user, token })
   }),
@@ -55,7 +55,7 @@ router.post(
   }
 
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, username, email, password_hash FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url FROM users WHERE email = ? LIMIT 1',
     [email],
   )
 
@@ -73,6 +73,7 @@ router.post(
     id: userRow.id as number,
     username: userRow.username as string,
     email: userRow.email as string,
+    avatarUrl: (userRow.avatar_url as string | null) ?? null,
   }
   const token = signToken({ sub: user.id, email: user.email, username: user.username })
   return res.json({ user, token })
@@ -85,7 +86,7 @@ router.get(
   asyncHandler(async (req: AuthedRequest, res) => {
   const userId = req.user!.sub
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, username, email FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url FROM users WHERE id = ? LIMIT 1',
     [userId],
   )
 
@@ -99,6 +100,7 @@ router.get(
       id: userRow.id as number,
       username: userRow.username as string,
       email: userRow.email as string,
+      avatarUrl: (userRow.avatar_url as string | null) ?? null,
     },
   })
   }),

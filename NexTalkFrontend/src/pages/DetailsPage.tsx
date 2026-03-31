@@ -1,3 +1,4 @@
+import { useChat } from '../context/ChatContext'
 import { useToast } from '../context/ToastContext'
 
 type DetailsPageProps = {
@@ -5,7 +6,33 @@ type DetailsPageProps = {
 }
 
 export function DetailsPage({ onBack }: DetailsPageProps) {
+  const { activeChat, deleteChat, blockChat } = useChat()
   const { notify } = useToast()
+
+  const chatName = activeChat?.display_title ?? activeChat?.title ?? 'this chat'
+  const isGroup = (activeChat?.is_group ?? 0) === 1
+
+  async function handleDelete() {
+    if (!activeChat) return
+    try {
+      await deleteChat(activeChat.id)
+      notify(isGroup ? 'Left the chat' : 'Chat deleted')
+      onBack()
+    } catch (error) {
+      notify((error as Error).message)
+    }
+  }
+
+  async function handleBlock() {
+    if (!activeChat) return
+    try {
+      await blockChat(activeChat.id)
+      notify(`Blocked ${chatName}`)
+      onBack()
+    } catch (error) {
+      notify((error as Error).message)
+    }
+  }
 
   return (
     <div className="panel">
@@ -43,18 +70,20 @@ export function DetailsPage({ onBack }: DetailsPageProps) {
             <li>Review onboarding copy</li>
             <li>Confirm launch checklist</li>
           </ul>
-          <button className="primary" onClick={() => notify('Task created')}>
-            Create task
+          <button className="primary" onClick={handleDelete}>
+            {isGroup ? 'Leave chat' : 'Delete chat'}
           </button>
         </div>
       </div>
       <div className="panel-actions">
-        <button className="ghost" onClick={() => notify('Pinned')}>
-          Pin chat
+        <button className="ghost" onClick={onBack}>
+          Cancel
         </button>
-        <button className="primary" onClick={() => notify('Settings opened')}>
-          Settings
-        </button>
+        {!isGroup && (
+          <button className="primary" onClick={handleBlock}>
+            Block user
+          </button>
+        )}
       </div>
     </div>
   )

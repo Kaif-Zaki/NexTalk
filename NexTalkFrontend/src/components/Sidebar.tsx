@@ -1,6 +1,7 @@
 import { useAuth } from '../context/AuthContext'
 import { useChat } from '../context/ChatContext'
 import { formatTime } from '../lib/time'
+import { API_BASE } from '../lib/constants'
 
 type SidebarProps = {
   onProfile: () => void
@@ -13,7 +14,13 @@ export function Sidebar({ onProfile }: SidebarProps) {
   return (
     <aside className="sidebar">
       <div className="user-card">
-        <div className="avatar avatar--lg">{user?.username?.[0] ?? 'K'}</div>
+        <div className="avatar avatar--lg">
+          {user?.avatarUrl ? (
+            <img src={`${API_BASE}${user.avatarUrl}`} alt={user.username} />
+          ) : (
+            user?.username?.[0] ?? 'K'
+          )}
+        </div>
         <div>
           <p className="user-name">{user?.username ?? 'Guest'}</p>
           <p className="user-role">{user?.email ?? 'Sign in to chat'}</p>
@@ -54,7 +61,7 @@ export function Sidebar({ onProfile }: SidebarProps) {
               <div className="chat-meta">
                 <div className="chat-row">
                   <span className="chat-name">
-                    {chat.title ?? `Chat #${chat.id}`}
+                    {chat.display_title ?? chat.title ?? `Chat #${chat.id}`}
                   </span>
                   <span className="chat-time">
                     {formatTime(chat.last_message_at) ||
