@@ -4,8 +4,21 @@ type ChatPageProps = {
   onFiles: () => void
   onCalls: () => void
   onDetails: () => void
+  onMenuToggle: () => void
 }
 
-export function ChatPage({ onFiles, onCalls, onDetails }: ChatPageProps) {
-  return <ChatView onFiles={onFiles} onCalls={onCalls} onDetails={onDetails} />
+export function ChatPage({
+  onFiles,
+  onCalls,
+  onDetails,
+  onMenuToggle,
+}: ChatPageProps) {
+  return (
+    <ChatView
+      onFiles={onFiles}
+      onCalls={onCalls}
+      onDetails={onDetails}
+      onMenuToggle={onMenuToggle}
+    />
+  )
 }

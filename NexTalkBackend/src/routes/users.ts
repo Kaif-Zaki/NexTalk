@@ -5,6 +5,7 @@ import type { RowDataPacket } from 'mysql2/promise'
 import { pool } from '../db'
 import { requireAuth, type AuthedRequest } from '../middleware/auth'
 import { asyncHandler } from '../utils/asyncHandler'
+import { normalizeMobileNumber } from '../utils/mobile'
 
 const router = Router()
 
@@ -24,19 +25,40 @@ router.patch(
   requireAuth,
   asyncHandler(async (req: AuthedRequest, res) => {
     const userId = req.user!.sub
-    const { username } = req.body as { username?: string }
+    const { username, mobileNumber } = req.body as {
+      username?: string
+      mobileNumber?: string
+    }
 
     if (!username || !username.trim()) {
       return res.status(400).json({ error: 'Username is required' })
     }
 
-    await pool.query('UPDATE users SET username = ? WHERE id = ? LIMIT 1', [
-      username.trim(),
-      userId,
-    ])
+    const normalizedMobile = mobileNumber
+      ? normalizeMobileNumber(mobileNumber)
+      : ''
+
+    if (mobileNumber && mobileNumber.trim() && !normalizedMobile) {
+      return res.status(400).json({ error: 'Mobile number is invalid' })
+    }
+
+    if (normalizedMobile) {
+      const [conflict] = await pool.query<RowDataPacket[]>(
+        'SELECT id FROM users WHERE mobile_number = ? AND id <> ? LIMIT 1',
+        [normalizedMobile, userId],
+      )
+      if (conflict.length > 0) {
+        return res.status(409).json({ error: 'Mobile number already in use' })
+      }
+    }
+
+    await pool.query(
+      'UPDATE users SET username = ?, mobile_number = ? WHERE id = ? LIMIT 1',
+      [username.trim(), normalizedMobile || null, userId],
+    )
 
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT id, username, email, avatar_url FROM users WHERE id = ? LIMIT 1',
+      'SELECT id, username, email, mobile_number, avatar_url FROM users WHERE id = ? LIMIT 1',
       [userId],
     )
     const user = rows[0]
@@ -48,6 +70,7 @@ router.patch(
         id: user.id as number,
         username: user.username as string,
         email: user.email as string,
+        mobileNumber: (user.mobile_number as string | null) ?? null,
         avatarUrl: (user.avatar_url as string | null) ?? null,
       },
     })

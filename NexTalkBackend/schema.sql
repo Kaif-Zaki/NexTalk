@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(50) NOT NULL,
   email VARCHAR(120) NOT NULL UNIQUE,
+  mobile_number VARCHAR(30) NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   avatar_url VARCHAR(255) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -58,4 +59,16 @@ CREATE TABLE IF NOT EXISTS blocks (
   UNIQUE KEY uniq_blocks (blocker_id, blocked_id),
   FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (blocked_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS chat_mobile_members (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  chat_id INT NOT NULL,
+  added_by_user_id INT NOT NULL,
+  member_name VARCHAR(80) NOT NULL,
+  mobile_number VARCHAR(30) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_chat_mobile (chat_id, mobile_number),
+  FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE,
+  FOREIGN KEY (added_by_user_id) REFERENCES users(id) ON DELETE CASCADE
 );

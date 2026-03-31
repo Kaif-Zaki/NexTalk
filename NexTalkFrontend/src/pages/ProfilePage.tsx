@@ -11,13 +11,15 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
   const { user, apiRequest, refreshUser, logout } = useAuth()
   const { notify } = useToast()
   const [username, setUsername] = useState(user?.username ?? '')
+  const [mobileNumber, setMobileNumber] = useState(user?.mobileNumber ?? '')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     setUsername(user?.username ?? '')
-  }, [user?.username])
+    setMobileNumber(user?.mobileNumber ?? '')
+  }, [user?.username, user?.mobileNumber])
 
   const avatarSrc = user?.avatarUrl ? `${API_BASE}${user.avatarUrl}` : null
 
@@ -30,7 +32,10 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
       setSaving(true)
       await apiRequest('/api/users/me', {
         method: 'PATCH',
-        body: JSON.stringify({ username: username.trim() }),
+        body: JSON.stringify({
+          username: username.trim(),
+          mobileNumber: mobileNumber.trim(),
+        }),
       })
       await refreshUser()
       notify('Profile saved')
@@ -65,6 +70,7 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
       }
     }
     reader.readAsDataURL(file)
+    event.target.value = ''
   }
 
   async function handleDeleteAccount() {
@@ -129,8 +135,12 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
             <input value={user?.email ?? ''} disabled />
           </label>
           <label className="field">
-            Status
-            <input defaultValue="Building NexTalk" />
+            Mobile number
+            <input
+              value={mobileNumber}
+              onChange={(event) => setMobileNumber(event.target.value)}
+              placeholder="+94 77 123 4567"
+            />
           </label>
         </div>
       </div>

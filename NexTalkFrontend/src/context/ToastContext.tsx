@@ -1,4 +1,5 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 
 type ToastContextValue = {
   message: string | null
@@ -11,16 +12,16 @@ const ToastContext = createContext<ToastContextValue | null>(null)
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [message, setMessage] = useState<string | null>(null)
 
-  function notify(text: string) {
+  const notify = useCallback((text: string) => {
     setMessage(text)
     window.setTimeout(() => setMessage(null), 1800)
-  }
+  }, [])
 
-  function clear() {
+  const clear = useCallback(() => {
     setMessage(null)
-  }
+  }, [])
 
-  const value = useMemo(() => ({ message, notify, clear }), [message])
+  const value = useMemo(() => ({ message, notify, clear }), [message, notify, clear])
 
   return <ToastContext.Provider value={value}>{children}</ToastContext.Provider>
 }

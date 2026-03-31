@@ -1,10 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { API_BASE } from '../lib/constants'
 
 type User = {
   id: number
   username: string
   email: string
+  mobileNumber: string | null
   avatarUrl: string | null
 }
 
@@ -12,7 +14,12 @@ type AuthContextValue = {
   token: string | null
   user: User | null
   login: (email: string, password: string) => Promise<User>
-  register: (username: string, email: string, password: string) => Promise<User>
+  register: (
+    username: string,
+    email: string,
+    mobileNumber: string,
+    password: string,
+  ) => Promise<User>
   logout: () => void
   refreshUser: () => Promise<void>
   apiRequest: <T>(path: string, options?: RequestInit) => Promise<T>
@@ -32,25 +39,25 @@ function parseJwt(token: string) {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setToken] = useState<string | null>(
+  const [token, setToken] = useState<string | null>(() =>
     localStorage.getItem('nextalk_token'),
   )
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null>(() => {
+    const savedToken = localStorage.getItem('nextalk_token')
+    if (!savedToken) return null
+    const payload = parseJwt(savedToken)
+    if (!payload) return null
+    return {
+      id: payload.sub,
+      email: payload.email,
+      username: payload.username,
+      mobileNumber: null,
+      avatarUrl: null,
+    }
+  })
 
   useEffect(() => {
-    if (!token) {
-      setUser(null)
-      return
-    }
-    const payload = parseJwt(token)
-    if (payload) {
-      setUser({
-        id: payload.sub,
-        email: payload.email,
-        username: payload.username,
-        avatarUrl: null,
-      })
-    }
+    if (!token) return
 
     fetch(`${API_BASE}/api/auth/me`, {
       headers: {
@@ -74,7 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
   }, [token])
 
-  async function apiRequest<T>(path: string, options: RequestInit = {}) {
+  const apiRequest = useCallback(async function <T>(
+    path: string,
+    options: RequestInit = {},
+  ) {
     const headers = new Headers(options.headers)
     headers.set('Content-Type', 'application/json')
     if (token) {
@@ -97,9 +107,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return data as T
-  }
+  }, [token])
 
-  async function login(email: string, password: string) {
+  const login = useCallback(async (email: string, password: string) => {
     const data = await apiRequest<{ user: User; token: string }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -109,35 +119,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(data.token)
     setUser(data.user)
     return data.user
-  }
+  }, [apiRequest])
 
-  async function register(username: string, email: string, password: string) {
+  const register = useCallback(async (
+    username: string,
+    email: string,
+    mobileNumber: string,
+    password: string,
+  ) => {
     const data = await apiRequest<{ user: User; token: string }>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ username, email, password }),
+      body: JSON.stringify({ username, email, mobileNumber, password }),
     })
 
     localStorage.setItem('nextalk_token', data.token)
     setToken(data.token)
     setUser(data.user)
     return data.user
-  }
+  }, [apiRequest])
 
-  function logout() {
+  const logout = useCallback(() => {
     localStorage.removeItem('nextalk_token')
     setToken(null)
     setUser(null)
-  }
+  }, [])
 
-  async function refreshUser() {
+  const refreshUser = useCallback(async () => {
     if (!token) return
     const data = await apiRequest<{ user: User }>('/api/auth/me')
     setUser(data.user)
-  }
+  }, [token, apiRequest])
 
   const value = useMemo<AuthContextValue>(
     () => ({ token, user, login, register, logout, refreshUser, apiRequest }),
-    [token, user],
+    [token, user, login, register, logout, refreshUser, apiRequest],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

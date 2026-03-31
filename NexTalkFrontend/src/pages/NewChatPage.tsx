@@ -11,27 +11,49 @@ export function NewChatPage({ onBack }: NewChatPageProps) {
   const { notify } = useToast()
   const [form, setForm] = useState({
     title: '',
-    memberEmails: '',
     message: '',
   })
+  const [memberInput, setMemberInput] = useState('')
+  const [members, setMembers] = useState<string[]>([])
+  const [creating, setCreating] = useState(false)
+
+  function handleAddMember() {
+    const next = memberInput.trim().toLowerCase()
+    if (!next) return
+    if (members.includes(next)) {
+      notify('Member already added')
+      return
+    }
+    setMembers((prev) => [...prev, next])
+    setMemberInput('')
+  }
+
+  function handleRemoveMember(email: string) {
+    setMembers((prev) => prev.filter((member) => member !== email))
+  }
 
   async function handleCreate() {
-    const memberEmails = form.memberEmails
-      .split(',')
-      .map((email) => email.trim())
-      .filter(Boolean)
+    if (members.length === 0) {
+      notify('Add at least one member')
+      return
+    }
 
     try {
+      setCreating(true)
       await createChat({
         title: form.title,
-        memberEmails,
+        memberEmails: members,
         welcomeMessage: form.message,
       })
       notify('Chat created and invites sent')
-      setForm({ title: '', memberEmails: '', message: '' })
+      setForm({ title: '', message: '' })
+      setMembers([])
+      setMemberInput('')
       onBack()
     } catch (error) {
       notify((error as Error).message)
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -39,8 +61,8 @@ export function NewChatPage({ onBack }: NewChatPageProps) {
     <div className="panel">
       <div className="panel-header">
         <div>
-          <p className="panel-title">Create a new chat</p>
-          <p className="panel-sub">Add member emails and send an invite message.</p>
+          <p className="panel-title">Create a channel</p>
+          <p className="panel-sub">Invite people by email and send a channel invite message.</p>
         </div>
         <button className="ghost" onClick={onBack}>
           Back to chat
@@ -48,23 +70,42 @@ export function NewChatPage({ onBack }: NewChatPageProps) {
       </div>
       <div className="panel-body">
         <label className="field">
-          Chat title
+          Channel title
           <input
             value={form.title}
             onChange={(event) => setForm({ ...form, title: event.target.value })}
-            placeholder="e.g. Project Phoenix"
+            placeholder="e.g. Product Team"
           />
         </label>
         <label className="field">
-          Member emails (comma separated)
-          <input
-            value={form.memberEmails}
-            onChange={(event) =>
-              setForm({ ...form, memberEmails: event.target.value })
-            }
-            placeholder="sam@team.com, alex@team.com"
-          />
+          Add member
+          <div className="member-row">
+            <input
+              value={memberInput}
+              onChange={(event) => setMemberInput(event.target.value)}
+              placeholder="alex@team.com"
+            />
+            <button className="ghost" onClick={handleAddMember} type="button">
+              Add member
+            </button>
+          </div>
         </label>
+        <div className="member-tags">
+          {members.length === 0 ? (
+            <p className="member-empty">No members added</p>
+          ) : (
+            members.map((member) => (
+              <button
+                key={member}
+                className="member-tag"
+                onClick={() => handleRemoveMember(member)}
+                type="button"
+              >
+                {member} ×
+              </button>
+            ))
+          )}
+        </div>
         <label className="field">
           Invite message
           <input
@@ -78,8 +119,8 @@ export function NewChatPage({ onBack }: NewChatPageProps) {
         <button className="ghost" onClick={onBack}>
           Cancel
         </button>
-        <button className="primary" onClick={handleCreate}>
-          Create chat
+        <button className="primary" onClick={handleCreate} disabled={creating}>
+          {creating ? <span className="btn-spinner" /> : 'Create channel'}
         </button>
       </div>
     </div>

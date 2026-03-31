@@ -1,13 +1,17 @@
 import { useChat } from '../context/ChatContext'
 import { useToast } from '../context/ToastContext'
+import { useState } from 'react'
 
 type DetailsPageProps = {
   onBack: () => void
 }
 
 export function DetailsPage({ onBack }: DetailsPageProps) {
-  const { activeChat, deleteChat, blockChat } = useChat()
+  const { activeChat, deleteChat, blockChat, addMember } = useChat()
   const { notify } = useToast()
+  const [memberEmail, setMemberEmail] = useState('')
+  const [inviteMessage, setInviteMessage] = useState('')
+  const [adding, setAdding] = useState(false)
 
   const chatName = activeChat?.display_title ?? activeChat?.title ?? 'this chat'
   const isGroup = (activeChat?.is_group ?? 0) === 1
@@ -34,6 +38,25 @@ export function DetailsPage({ onBack }: DetailsPageProps) {
     }
   }
 
+  async function handleAddMember() {
+    if (!activeChat) return
+    if (!memberEmail.trim()) {
+      notify('Enter member email')
+      return
+    }
+    try {
+      setAdding(true)
+      await addMember(activeChat.id, memberEmail.trim(), inviteMessage.trim())
+      notify('Member added and invite sent')
+      setMemberEmail('')
+      setInviteMessage('')
+    } catch (error) {
+      notify((error as Error).message)
+    } finally {
+      setAdding(false)
+    }
+  }
+
   return (
     <div className="panel">
       <div className="panel-header">
@@ -47,29 +70,33 @@ export function DetailsPage({ onBack }: DetailsPageProps) {
       </div>
       <div className="panel-body details-grid">
         <div className="details-card">
-          <p className="section-title">Team snapshot</p>
-          <div className="metrics">
-            <div>
-              <p className="metric-value">8</p>
-              <p className="metric-label">Members</p>
-            </div>
-            <div>
-              <p className="metric-value">3</p>
-              <p className="metric-label">Online</p>
-            </div>
-            <div>
-              <p className="metric-value">12</p>
-              <p className="metric-label">Files</p>
-            </div>
+          <div className="details-stack">
+            <p className="section-title">Add Member</p>
+            <label className="field">
+              Member email
+              <input
+                type="email"
+                value={memberEmail}
+                onChange={(event) => setMemberEmail(event.target.value)}
+                placeholder="alex@team.com"
+              />
+            </label>
+            <label className="field">
+              Invite message (optional)
+              <input
+                value={inviteMessage}
+                onChange={(event) => setInviteMessage(event.target.value)}
+                placeholder="Join our chat on NexTalk"
+              />
+            </label>
+            <button className="primary" onClick={handleAddMember} disabled={adding}>
+              {adding ? <span className="btn-spinner" /> : 'Add member'}
+            </button>
           </div>
         </div>
         <div className="details-card">
-          <p className="section-title">Next actions</p>
-          <ul className="task-list">
-            <li>Finalize schema migration</li>
-            <li>Review onboarding copy</li>
-            <li>Confirm launch checklist</li>
-          </ul>
+          <p className="section-title">Chat actions</p>
+          <p className="panel-sub">Manage this conversation.</p>
           <button className="primary" onClick={handleDelete}>
             {isGroup ? 'Leave chat' : 'Delete chat'}
           </button>
