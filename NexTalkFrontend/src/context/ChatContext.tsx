@@ -85,6 +85,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [readAtByChat, setReadAtByChat] = useState<Record<number, string>>({});
   const socketRef = useRef<Socket | null>(null);
 
+  const isUploadAssetPath = useCallback(
+    (body: string) =>
+      body.startsWith("/assets/uploads/") ||
+      body.startsWith("assets/uploads/") ||
+      /^(https?:\/\/[^/]+)?\/assets\/uploads\//.test(body),
+    [],
+  );
+
   const activeChat = useMemo(
     () => chats.find((chat) => chat.id === activeChatId) ?? null,
     [activeChatId, chats],
@@ -197,7 +205,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           chat.id === activeChatId
             ? {
                 ...chat,
-                last_message: data.message.body.startsWith("/assets/uploads/")
+                last_message: isUploadAssetPath(data.message.body)
                   ? "[Image]"
                   : data.message.body,
                 last_message_at: data.message.created_at,
@@ -248,7 +256,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           chat.id === activeChatId
             ? {
                 ...chat,
-                last_message: data.message.body.startsWith("/assets/uploads/")
+                last_message: isUploadAssetPath(data.message.body)
                   ? "[Attachment]"
                   : data.message.body,
                 last_message_at: data.message.created_at,
@@ -394,7 +402,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           chat.id === message.chat_id
             ? {
                 ...chat,
-                last_message: message.body.startsWith("/assets/uploads/")
+                last_message: isUploadAssetPath(message.body)
                   ? "[Image]"
                   : message.body,
                 last_message_at: message.created_at,

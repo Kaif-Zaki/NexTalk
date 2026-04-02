@@ -10,7 +10,7 @@ import { emitToChat } from "../socket";
 import { asyncHandler } from "../utils/asyncHandler";
 
 const router = Router();
-const uploadsDir = path.resolve(__dirname, "..", "assets", "uploads");
+const uploadsDir = path.resolve(__dirname, "..", "..", "assets", "uploads");
 
 const storage = multer.diskStorage({
   destination: (_req: any, _file: any, cb: any) => {
@@ -153,7 +153,6 @@ router.post(
       return res.status(400).json({ error: "Invalid image data" });
     }
 
-    const uploadsDir = path.resolve(__dirname, "..", "assets", "uploads");
     await fs.mkdir(uploadsDir, { recursive: true });
 
     const safeName = path.basename(filename).replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -197,12 +196,33 @@ router.post(
     const userId = req.user!.sub;
     const chatId = Number(req.params.chatId);
     const file = (req as any).file;
+    const contentType = req.headers["content-type"] ?? "unknown";
+
+    console.log("[upload] file upload request", {
+      chatId,
+      hasFile: Boolean(file),
+      contentType,
+      bodyKeys: Object.keys(req.body ?? {}),
+      file: file
+        ? {
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            fieldname: file.fieldname,
+          }
+        : null,
+    });
 
     if (!Number.isFinite(chatId)) {
       return res.status(400).json({ error: "Invalid chat id" });
     }
 
     if (!file) {
+      console.warn("[upload] missing file in request", {
+        chatId,
+        contentType,
+        bodyKeys: Object.keys(req.body ?? {}),
+      });
       return res.status(400).json({ error: "File upload required" });
     }
 

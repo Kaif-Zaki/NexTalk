@@ -18,6 +18,11 @@ const app = express();
 app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
 app.use(express.json({ limit: "50mb" }));
 
+app.use(
+  "/assets/uploads",
+  express.static(path.join(__dirname, "assets/uploads"))
+);
+
 const possibleAssetsPaths = [
   path.resolve(__dirname, "..", "assets"),
   path.resolve(__dirname, "..", "..", "assets"),

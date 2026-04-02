@@ -45,6 +45,7 @@ export function ChatView({
   const [sending, setSending] = useState(false);
   const [roomSwitchKey, setRoomSwitchKey] = useState(0);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [failedImageIds, setFailedImageIds] = useState<Set<number>>(new Set());
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(
@@ -229,14 +230,37 @@ export function ChatView({
     }
   }
 
-  const isAttachmentPath = (body: string) =>
-    body.startsWith("/assets/uploads/");
+  const normalizeUploadPath = (body: string) => {
+    if (body.startsWith("assets/uploads/")) return `/${body}`;
+    if (body.startsWith("//assets/uploads/"))
+      return body.replace(/^\/\//, "http://");
+    return body;
+  };
+
+  const getAssetUrl = (body: string) => {
+    if (!body) return "";
+    if (/^https?:\/\//.test(body)) return body;
+    const cleanBody = body.startsWith("/") ? body : `/${body}`;
+    return `${API_BASE.replace(/\/$/, "")}${cleanBody}`;
+  };
+
+  const isAttachmentPath = (body: string) => /\/assets\/uploads\//i.test(body);
 
   const isImagePath = (body: string) =>
     body.startsWith("data:image/") ||
-    /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(body);
+    /\.(jpe?g|png|gif|webp|bmp|svg)(?:[?#].*)?$/i.test(body);
 
-  const getAttachmentName = (body: string) => body.split("/").pop() ?? body;
+  const isUploadPath = (body: string) => /\/assets\/uploads\//i.test(body);
+
+  const getAttachmentName = (body: string) => {
+    try {
+      const parsed = new URL(body);
+      return parsed.pathname.split("/").pop() ?? body;
+    } catch {
+      const normalized = normalizeUploadPath(body);
+      return normalized.split("/").pop() ?? body;
+    }
+  };
 
   return (
     <div className="chat">
@@ -330,20 +354,49 @@ export function ChatView({
                       className={`message-row ${mine ? "mine" : "theirs"}`}
                     >
                       <div className="message-bubble">
-                        {isImagePath(item.body) ? (
-                          <img
-                            className="message-image"
-                            src={
-                              item.body.startsWith("/assets/uploads/")
-                                ? `${API_BASE}${item.body}`
-                                : item.body
-                            }
-                            alt={getAttachmentName(item.body)}
-                          />
+                        {isImagePath(item.body) ||
+                        (isUploadPath(item.body) &&
+                          !failedImageIds.has(item.id)) ? (
+                          <>
+                            <a
+                              href={getAssetUrl(item.body)}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                            >
+                              <img
+                                className="message-image"
+                                src={getAssetUrl(item.body)}
+                                alt={getAttachmentName(item.body)}
+                                onError={() =>
+                                  setFailedImageIds((prev) => {
+                                    const next = new Set(prev);
+                                    next.add(item.id);
+                                    return next;
+                                  })
+                                }
+                                style={{
+                                  display: failedImageIds.has(item.id)
+                                    ? "none"
+                                    : "block",
+                                }}
+                              />
+                            </a>
+                            {failedImageIds.has(item.id) ? (
+                              <a
+                                className="message-file-link"
+                                href={getAssetUrl(item.body)}
+                                target="_blank"
+                                rel="noreferrer noopener"
+                                download={getAttachmentName(item.body)}
+                              >
+                                📎 {getAttachmentName(item.body)}
+                              </a>
+                            ) : null}
+                          </>
                         ) : isAttachmentPath(item.body) ? (
                           <a
                             className="message-file-link"
-                            href={`${API_BASE}${item.body}`}
+                            href={getAssetUrl(item.body)}
                             target="_blank"
                             rel="noreferrer noopener"
                             download={getAttachmentName(item.body)}
